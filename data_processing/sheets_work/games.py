@@ -3,7 +3,7 @@ import json
 import os
 import string
 
-from ..config import Connect, FILEPATH_JSON
+from ..config import Connect
 from database import TOURNAMENT_TYPES
 from googlesheets import SPREADSHEET_ID
 
@@ -41,6 +41,8 @@ class Games(Connect):
 
     def _get_column(self, column: str) -> str:
         if self.tournament_type == 'FAST':
+            return self.cells[self.cells.index(self.CELLS_COLS[column]) + self.OFFSET * 2]
+        elif self.tournament_type == 'STANDART':
             return self.cells[self.cells.index(self.CELLS_COLS[column]) + self.OFFSET]
         else:
             return self.CELLS_COLS[column]
@@ -146,40 +148,24 @@ class Games(Connect):
 
     def clear_table(self):
         # Clear the table and unmerge the all cells
-        if self.tournament_type == 'FAST':
-            os.remove(FILEPATH_JSON + self.DAY_JSON)
-            last_row = len(
-                self.worksheet.col_values(
-                    self.cells.index(self._get_column('teams')) + 1
-                )
+        path = self._get_json_path(self.tournament_type)
+        os.remove(path)
+        
+        last_row = len(
+            self.worksheet.col_values(
+                self.cells.index(self._get_column('teams')) + 1
             )
-            self.worksheet.batch_clear(
-                [f'{self._get_column("game_number")}2:{self._get_column("url")}{last_row}']
-            )
-            self.worksheet.unmerge_cells(
-                f'{self._get_column("game_number")}2:{self._get_column("url")}{last_row}'
-            )
-        else:
-            os.remove(FILEPATH_JSON + self.WEEK_JSON)
-            last_row = len(
-                self.worksheet.col_values(
-                    self.cells.index(self._get_column('teams')) + 1
-                )
-            )
-            cells_range = f'{self._get_column("game_number")}2:' \
-                          f'{self._get_column("url")}{last_row}'
-            self.worksheet.batch_clear([cells_range])
-            self.worksheet.unmerge_cells(cells_range)
-
+        )
+        cells_range = f'{self._get_column("game_number")}2:' \
+                        f'{self._get_column("url")}{last_row}'
+        self.worksheet.batch_clear([cells_range])
+        self.worksheet.unmerge_cells(cells_range)
         
 
     def approve_tournament_games(self):
         # approve the games to the tournament in table of the games 
         # if the coefficients have been changed in the tables
-        if self.tournament_type == 'FAST':
-            path = FILEPATH_JSON + self.DAY_JSON
-        else:
-            path = FILEPATH_JSON + self.WEEK_JSON
+        path = self._get_json_path(self.tournament_type)
 
         with open(path, 'r', encoding='utf-8') as file:
             games = json.load(file)

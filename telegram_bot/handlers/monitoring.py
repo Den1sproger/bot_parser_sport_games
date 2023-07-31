@@ -6,14 +6,14 @@ import schedule
 from aiogram import types
 from aiogram.utils.exceptions import ChatNotFound, CantInitiateConversation
 from aiogram.dispatcher.filters import Command, Text
-from ..bot_config import dp, ADMIN, users_bot
+from ..bot_config import dp, ADMIN, users_bot, bot
 from data_processing import Monitoring, Comparison
 from ..keyboards import (get_select_tourn_type_ikb,
                          start_mail_ikb)
 from database import (Database,
-                      get_prompt_view_nick_by_id,
+                      get_prompt_view_chat_id_by_nick,
                       get_prompt_view_rating,
-                      get_prompt_view_chat_id_by_tourn,
+                      get_prompt_view_nicknames_by_tourn,
                       get_prompt_view_games_id)
 
 
@@ -37,14 +37,14 @@ async def monitoring(*tourn_types) -> None:
                 tourn_name = ws.title           # tournament name
                 if item in tourn_name.upper():
 
-                    users = db.get_data_list(get_prompt_view_chat_id_by_tourn(tourn_name))
+                    users = db.get_data_list(get_prompt_view_nicknames_by_tourn(tourn_name))
                     for user in users:
 
                         # creating leaderboard
-                        user_chat_id = user['chat_id']
-                        nickname = db.get_data_list(
-                            get_prompt_view_nick_by_id(user_chat_id)
-                        )[0]['nickname']
+                        nickname = user['nickname']
+                        user_chat_id = db.get_data_list(
+                            get_prompt_view_chat_id_by_nick(nickname)
+                        )[0]['chat_id']
 
                         msg_text = f'🏆Таблица лидеров {tourn_name}:\n'
 
@@ -72,6 +72,11 @@ async def monitoring(*tourn_types) -> None:
                             )
                         except (ChatNotFound, CantInitiateConversation):
                             pass
+
+        await bot.send_message(
+            chat_id=ADMIN,
+            text=f'Турниры {item} завершены🔚🔚🔚'
+        )
         
         # time.sleep(10)
 

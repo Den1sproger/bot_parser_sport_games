@@ -4,9 +4,7 @@ from aiogram import types
 from aiogram.utils.exceptions import ChatNotFound, CantInitiateConversation
 from data_processing import Rating, Games, Collection, Comparison
 from ..bot_config import dp, users_bot
-from ..keyboards import (finish_mail_ikb,
-                         get_tourn_type_ikb,
-                         get_ikb_gs_url)
+from ..keyboards import get_tourn_type_ikb, get_ikb_gs_url
 from googlesheets import GAMES_SPREADSHEET_URL, RATING_SPREADSHEET_URL
 from database import (Database,
                       PROMPT_VIEW_USERS,
@@ -16,8 +14,7 @@ from database import (Database,
                       get_prompt_view_username_by_id,
                       get_prompt_delete_games,
                       get_prompt_delete_rating,
-                      get_prompt_register_participant,
-                      get_prompt_delete_users_tournaments)
+                      get_prompt_register_participant)
 
 
 
@@ -71,7 +68,6 @@ async def select_type_finish(callback: types.CallbackQuery) -> None:
         db.action(
             get_prompt_delete_rating(tourn_type),
             get_prompt_delete_answers(tourn_type),
-            get_prompt_delete_users_tournaments(tourn_type),
             get_prompt_delete_games(tourn_type)
         )
         gs = Games(tourn_type=tourn_type)
@@ -162,7 +158,8 @@ async def add_rating(callback: types.CallbackQuery) -> None:
                 nickname=item[0],
                 tournament=item[-1]
             )
-        )
+        ),
+        
     db.action(*queries)
 
     await callback.answer('✅Текущий рейтинг создан')

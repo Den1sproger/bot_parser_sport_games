@@ -4,7 +4,6 @@ import json
 import requests
 
 from datetime import datetime, timedelta, timezone
-from ..config import FILEPATH_JSON
 from database import (Database,
                       TOURNAMENT_TYPES,
                       get_prompt_add_game,
@@ -34,6 +33,8 @@ class Collection(Parser):
         'Волейбол': False
     }
     SHEET_NAME = "Матчи на турнир"
+    EMAIL_MONTH_CELL = 'X3'
+    PASSWORD_MONTH_CELL = 'X4'
     EMAIL_WEEK_CELL = 'H3'
     PASSWORD_WEEK_CELL = 'H4'
     EMAIL_DAY_CELL = 'P3'
@@ -56,9 +57,12 @@ class Collection(Parser):
             if self.tournament_type == 'FAST':
                 self.email = ws_games.acell(self.EMAIL_DAY_CELL).value
                 self.password = ws_games.acell(self.PASSWORD_DAY_CELL).value
-            else:
+            if self.tournament_type == 'STANDART':
                 self.email = ws_games.acell(self.EMAIL_WEEK_CELL).value
                 self.password = ws_games.acell(self.PASSWORD_WEEK_CELL).value
+            else:
+                self.email = ws_games.acell(self.EMAIL_MONTH_CELL).value
+                self.password = ws_games.acell(self.PASSWORD_MONTH_CELL).value
 
 
     def log_in(self) -> dict[str, str]:
@@ -213,22 +217,14 @@ class Collection(Parser):
 
     def recorde_to_json(self):
         # recorging the full data of games to json file
-        path: str
-        if self.tournament_type == 'FAST':
-            path = FILEPATH_JSON + self.DAY_JSON
-        else:
-            path = FILEPATH_JSON + self.WEEK_JSON
+        path = self._get_json_path(self.tournament_type)
         with open(path, 'w', encoding='utf-8') as file:
             json.dump(self.full_data, file, indent=4, ensure_ascii=False)
 
     
     def get_games_from_json(self) -> dict[dict[str, int]]:
         # extract full data from json
-        path: str
-        if self.tournament_type == 'FAST':
-            path = FILEPATH_JSON + self.DAY_JSON
-        else:
-            path = FILEPATH_JSON + self.WEEK_JSON
+        path = self._get_json_path(self.tournament_type)
         with open(path, 'r', encoding='utf-8') as file:
             return json.load(file)
     

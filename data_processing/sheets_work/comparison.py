@@ -23,7 +23,7 @@ class Comparison(Connect):
         db = Database()
         for ws in self.wss:
             if tourn_type in ws.title.upper():
-                chat_ids = ws.col_values(self.CHAT_ID_COLUMN)[1:]
+                chat_ids = set(ws.col_values(self.CHAT_ID_COLUMN)[1:])
                 for chat_id in chat_ids:
                     try:
                         nickname = db.get_data_list(

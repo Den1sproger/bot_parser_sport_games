@@ -12,6 +12,7 @@ FILEPATH_JSON = "/home/tournament_management/data_processing/scrapping/"
 class Connect:
     """Connecting to googlesheets by service account"""
 
+    MONTH_JSON = 'games_month.json'
     WEEK_JSON = 'games_week.json'
     DAY_JSON = 'games_day.json'
     
@@ -22,6 +23,17 @@ class Connect:
         self.gc = gspread.service_account_from_dict(CREDENTIALS,
                                                     client_factory=gspread.BackoffClient)
         self.spreadsheet = self.gc.open_by_key(spreadsheet_id)
+
+
+    def _get_json_path(self, type_: str) -> str:
+        path = FILEPATH_JSON
+        if type_ == 'FAST':
+            path += self.DAY_JSON
+        elif type_ == 'STANDART':
+            path += self.WEEK_JSON
+        else:
+            path += self.MONTH_JSON
+        return path
 
 
     def __del__(self):

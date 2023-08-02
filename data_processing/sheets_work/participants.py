@@ -50,7 +50,7 @@ class Rating(Connect):
             self.worksheet.col_values(self.cells.index(column) + 1)
         )
         left_top_cell = f'{self._get_column("nickname")}3'
-        right_low_cell = f'{self._get_column("score")}{last_row}'
+        right_low_cell = f'{self._get_column("score")}{last_row + 1}'
 
         self.worksheet.batch_clear([f'{left_top_cell}:{right_low_cell}'])
 
@@ -93,11 +93,11 @@ class Users(Connect):
         nicknames_from_gs = self.worksheet.col_values(3)[1:]
 
         for item in new_scores:
-            row = nicknames_from_gs.index(item['nickname'])
-            cell = f"{self.CELLS_COLS('score')}{row}"
+            row = nicknames_from_gs.index(item['nickname']) + 2
+            cell = f"{self.CELLS_COLS['score']}{row}"
             update_data.append({
                 'range': cell,
-                'values': item['all_scores']
+                'values': [[item['all_scores']]]
             })
             
         self.worksheet.batch_update(update_data)

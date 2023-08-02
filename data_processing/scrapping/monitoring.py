@@ -1,6 +1,6 @@
 import string
 
-from database import (Database,
+from database import (Database_Thread,
                       TOURNAMENT_TYPES,
                       get_prompt_view_games_id,
                       get_prompt_update_status,
@@ -50,61 +50,70 @@ class Monitoring(Parser):
         # main function
         # checking the status of the games and update data in database
         completed_types = []
-        db = Database()
+        db = Database_Thread()
         update_data = []
+
         for type_ in self.tournament_types:
-            games = db.get_data_list(get_prompt_view_games_id(type_))
+
+            games = db.get_data_list(               # get games
+                get_prompt_view_games_id(type_)
+            )
             if games:
-                games_id = [i['game_key'] for i in games]      # get games
+                
+                games_id = [i[0] for i in games]      # get keys of games
                 for game in games_id:                                   # games iteration
+
                     status = self._get_data_time(game, data_key='DA')
                     if status in [2, 3]:                                # if the game time status is not 1
-                        db.action(
-                            get_prompt_update_status(game, status)
-                        )
+                        
                         if status == 3:                                 # if the game is over
+                            
                             coeffs = db.get_data_list(
                                 get_prompt_view_game_coeffs(game)
                             )[0]
-                            coeffs = list(coeffs.values())
+                            coeffs = list(coeffs)
                             result = self.get_winner(game)   # winner
 
                             answers = db.get_data_list(
                                 get_prompt_view_users_by_answer(game, type_)
                             )
                             for answer in answers:                        # game answers iteration
-                                if result == answer['answer']:            # if user's answer is right
-
+                                
+                                if result == answer[1]:            # if user's answer is right
                                     # get the user internal nickname by Telegram chat id 
                                     nickname = db.get_data_list(            
-                                        get_prompt_view_nick_by_id(answer['chat_id'])       
-                                    )[0]['nickname']
+                                        get_prompt_view_nick_by_id(answer[0])
+                                    )[0][0]
 
-                                    scores = self.get_scores_by_coeff(coeffs[result])
-
-                                    # update the user's scores in the participants table in the database
-                                    prompts = get_prompt_add_scores(
-                                        adding_scores=scores,
-                                        nickname=nickname,
-                                        tournament=answer['tournament']
-                                    )
-                                    db.action(*prompts)
-
+                                    scores = self.get_scores_by_coeff(coeffs[result - 1])
+                                    
                                     # update the user's scoes in the current table in the googlesheets
                                     cell, adding_scores = self.get_cell_add_score(
                                         score=scores, nickname=nickname,
                                         tourn_type=type_,
-                                        tournament=answer['tournament']
+                                        tournament=answer[-1]
                                     )
                                     update_data.append({
                                         'range': cell, 'values': [[adding_scores]]
                                     })
 
+                                    # update the user's scores in the participants table in the database
+                                    prompts = get_prompt_add_scores(
+                                        adding_scores=scores,
+                                        nickname=nickname,
+                                        tournament=answer[-1]
+                                    )
+                                    db.action(*prompts)
+                            # update scores
+                            self.worksheet.batch_update(update_data)
+                        db.action(
+                            get_prompt_update_status(game, status)
+                        )
+
             else:       # tournament is over
                 completed_types.append(type_)
 
-        # update scores and update rating
-        self.worksheet.batch_update(update_data)
+        # update rating
         self.update_rating()
 
         # if the tournament or tournaments are over
@@ -163,7 +172,7 @@ class Monitoring(Parser):
         participants = self.worksheet.col_values(
             self.cells.index(self._get_column("nickname", tourn_type)) + 1
         )
-        last_row = len(participants) - 2
+        last_row = len(participants)
         cells_range = f"{self._get_column('nickname', tourn_type)}3:" \
                       f"{self._get_column('tourn_type', tourn_type)}{last_row}"
         data = self.worksheet.get(cells_range)
@@ -171,7 +180,7 @@ class Monitoring(Parser):
         for item in data:
             if item[0] == nickname and item[-1] == tournament:
                 old_scores = int(item[1]) 
-                row = data.index[item] + 3
+                row = data.index(item) + 3
                 return f"{self._get_column('score', tourn_type)}{row}", old_scores + score
 
 
@@ -186,8 +195,8 @@ class Monitoring(Parser):
                           f'{self._get_column("tourn_type", type_)}{last_row}'
             
             self.worksheet.sort(
-                (cells.index(self._get_column("tourn_type")) + 1, 'des'),
-                (cells.index(self._get_column("score")) + 1, 'des'),
+                (cells.index(self._get_column("tourn_type", type_)) + 1, 'des'),
+                (cells.index(self._get_column("score", type_)) + 1, 'des'),
                 range=cells_range
             )
 

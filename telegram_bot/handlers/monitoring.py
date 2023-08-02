@@ -1,19 +1,20 @@
 import threading
-import asyncio
 
 import schedule
 
 from aiogram import types
 from aiogram.utils.exceptions import ChatNotFound, CantInitiateConversation
 from aiogram.dispatcher.filters import Command, Text
-from ..bot_config import dp, ADMIN, users_bot, bot
+from ..bot_config import dp, ADMIN, TOKEN, send_msg, users_bot
 from data_processing import Monitoring, Comparison
 from ..keyboards import (get_select_tourn_type_ikb,
-                         start_mail_ikb)
+                         get_start_mail_ikb)
 from database import (Database,
+                      get_prompt_view_username_by_id,
                       get_prompt_view_chat_id_by_nick,
                       get_prompt_view_rating,
                       get_prompt_view_nicknames_by_tourn,
+                      get_prompt_view_nicknames_by_tourn_type,
                       get_prompt_view_games_id)
 
 
@@ -23,12 +24,53 @@ thread_monitoring: threading.Thread
 thread_active = False
 
 
-async def monitoring(*tourn_types) -> None:
-    m = Monitoring(*tourn_types)
-    result = m.check_status()
+
+@dp.callback_query_handler(lambda callback: callback.data.startswith('send_start_notification_'))
+async def send_start_notification(callback: types.CallbackQuery) -> None:
+    tourn_types = callback.data.replace('send_start_notification_', '').split('_')
 
     db = Database()
+    
+    chat_ids = []
+    for i in tourn_types:
+        users = db.get_data_list(get_prompt_view_nicknames_by_tourn_type(i))
+        nicknames = [i['nickname'] for i in users]
+        for nick in nicknames:
+            chat_id = db.get_data_list(
+                get_prompt_view_chat_id_by_nick(nick)
+            )[0]['chat_id']
+            chat_ids.append(chat_id)
+
+    msg_text='❗️❗️❗️Доступно голосование в некоторых турнирах'
+    for chat_id in set(chat_ids):
+        try:
+            await users_bot.send_message(chat_id=chat_id, text=msg_text)
+        except (ChatNotFound, CantInitiateConversation):
+            username = db.get_data_list(
+                get_prompt_view_username_by_id(str(chat_id))
+            )[0]['username']
+            await callback.message.answer(
+                f'@{username} не создал чат с ботом'
+            )
+
+    await callback.message.answer('✅Уведомления отправлены пользователям')
+
+
+
+def monitoring() -> None:
+    global current_selected_types
+    result = None
+    if current_selected_types:
+        m = Monitoring(*current_selected_types)
+        result = m.check_status()
+        db = Database()
+        
     if result:
+
+        send_msg(
+            msg_text=f'Турниры {" ".join(result)} завершены🔚🔚🔚',
+            chat_id=ADMIN, token=TOKEN
+        )
         for item in result:     # for every tournament type in completed types
 
             comparison = Comparison()
@@ -64,28 +106,15 @@ async def monitoring(*tourn_types) -> None:
 
                         # user's position
                         msg_text += f'\nВаша позиция в списке: {own_number} из {len(rating)}' \
-                                    f'\n{own_number}{nickname}: {own_score}'
+                                    f'\n{own_number}. {nickname}: {own_score}'
                         
-                        try:
-                            await users_bot.send_message(
-                                chat_id=user_chat_id, text=msg_text
-                            )
-                        except (ChatNotFound, CantInitiateConversation):
-                            pass
+                        send_msg(msg_text=msg_text, chat_id=user_chat_id)
 
-        await bot.send_message(
-            chat_id=ADMIN,
-            text=f'Турниры {item} завершены🔚🔚🔚'
-        )
-        
-        # time.sleep(10)
-
-def mon_coroutine_wrapper(*tourn_types):
-    asyncio.run(monitoring(*tourn_types))
+            current_selected_types.remove(item)
 
 
-def run_monitoring(types: list[str]) -> None:
-    schedule.every(20).minutes.do(mon_coroutine_wrapper, *types)
+def run_monitoring() -> None:
+    schedule.every(15).minutes.do(monitoring)
     while thread_active:
         schedule.run_pending()
         
@@ -113,6 +142,7 @@ async def break_monitoring(message: types.Message) -> None:
     else:
         thread_active = False
         thread_monitoring.join()
+        current_selected_types.clear()
         await message.answer('✅Мониторинг остановлен')
 
 
@@ -156,10 +186,12 @@ async def unselect_type(callback: types.CallbackQuery) -> None:
             return
     
     thread_monitoring = threading.Thread(target=run_monitoring,
-                                         daemon=True,
-                                         args=(current_selected_types,))
+                                         daemon=True)
     thread_active = True
     thread_monitoring.start()
 
-    current_selected_types.clear()
-    await callback.message.answer("✅Мониторинг запущен", reply_markup=start_mail_ikb)
+    await callback.message.answer(
+        text="✅Мониторинг запущен",
+        reply_markup=get_start_mail_ikb(current_selected_types)
+    )
+    await callback.message.delete()

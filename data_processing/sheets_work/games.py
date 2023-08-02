@@ -41,12 +41,11 @@ class Games(Connect):
 
     def _get_column(self, column: str) -> str:
         if self.tournament_type == 'FAST':
-            return self.cells[self.cells.index(self.CELLS_COLS[column]) + self.OFFSET * 2]
-        elif self.tournament_type == 'STANDART':
             return self.cells[self.cells.index(self.CELLS_COLS[column]) + self.OFFSET]
-        else:
+        elif self.tournament_type == 'STANDART':
             return self.CELLS_COLS[column]
-        
+        else:
+            return self.cells[self.cells.index(self.CELLS_COLS[column]) + self.OFFSET * 2]
 
 
     def __combining_cells_in_line(self, length: int, count_gs: int) -> None:
@@ -147,10 +146,7 @@ class Games(Connect):
         
 
     def clear_table(self):
-        # Clear the table and unmerge the all cells
-        path = self._get_json_path(self.tournament_type)
-        os.remove(path)
-        
+        # Clear the table and unmerge the all cells        
         last_row = len(
             self.worksheet.col_values(
                 self.cells.index(self._get_column('teams')) + 1
@@ -161,6 +157,9 @@ class Games(Connect):
         self.worksheet.batch_clear([cells_range])
         self.worksheet.unmerge_cells(cells_range)
         
+        path = self._get_json_path(self.tournament_type)
+        os.remove(path)
+
 
     def approve_tournament_games(self):
         # approve the games to the tournament in table of the games 

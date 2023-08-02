@@ -3,7 +3,8 @@ from .config import (TOKEN,
                      users_bot,
                      dp,
                      ADMIN,
-                     set_default_commands)
+                     set_default_commands,
+                     send_msg)
 
 
 __all__ = [
@@ -12,5 +13,6 @@ __all__ = [
     'users_bot',
     'dp',
     'ADMIN',
-    'set_default_commands'
+    'set_default_commands',
+    'send_msg'
 ]

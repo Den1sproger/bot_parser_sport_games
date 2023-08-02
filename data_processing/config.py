@@ -1,4 +1,6 @@
 # Start page 'https://www.flashscorekz.com/favourites/'
+import logging
+import time
 
 import gspread
 
@@ -18,11 +20,21 @@ class Connect:
     
     def __init__(self,
                  spreadsheet_id: str,
+                 retry: int = 5,
                  *args, **kwargs) -> None:
         # connectig to googlesheets
-        self.gc = gspread.service_account_from_dict(CREDENTIALS,
-                                                    client_factory=gspread.BackoffClient)
-        self.spreadsheet = self.gc.open_by_key(spreadsheet_id)
+        try:
+            self.gc = gspread.service_account_from_dict(CREDENTIALS,
+                                                        client_factory=gspread.BackoffClient)
+            self.spreadsheet = self.gc.open_by_key(spreadsheet_id)
+        except Exception as _ex:
+            if retry:
+                logging.info(f'retry={retry} => spreadsheet {_ex}')
+                retry -= 1
+                time.sleep(5)
+                self.__init__(spreadsheet_id, retry)
+            else:
+                pass
 
 
     def _get_json_path(self, type_: str) -> str:

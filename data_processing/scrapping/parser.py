@@ -1,3 +1,6 @@
+import time
+import logging
+
 import requests
 
 from fake_useragent import UserAgent
@@ -14,7 +17,7 @@ class Parser(Connect):
         self.ua = UserAgent(browsers=["chrome"])
 
 
-    def _create_game_request(self, url: str) -> list[str]:
+    def _create_game_request(self, url: str, retry: int = 5) -> list[str]:
         # get data by the request for the one game
         headers = {
             'authority': 'local-ruua.flashscore.ninja',
@@ -24,20 +27,25 @@ class Parser(Connect):
             'user-agent': self.ua.random,
             'x-fsign': 'SW9D1eZo',
         }
-        response = requests.get(url=url, headers=headers)
-        return response.text.split('¬')
+        try:
+            response = requests.get(url=url, headers=headers)
+        except Exception as _ex:
+            if retry:
+                logging.info(f'retry={retry} => {url}')
+                retry -= 1
+                time.sleep(5)
+                return self._create_game_request(url, retry)
+            else:
+                raise     
+        else:
+            return response.text.split('¬')
 
 
     def _get_data_time(self, game_id: str, data_key: str) -> int:
         # get data of time from the request of one game
-        data: int
-
         game_data = self._create_game_request(
             url=f'https://local-ruua.flashscore.ninja/46/x/feed/dc_1_{game_id}'
         )
         for item in game_data:
             if data_key in item:
-                data = int(item.split('÷')[-1])
-                break
-
-        return data
+                return int(item.split('÷')[-1])

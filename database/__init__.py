@@ -1,4 +1,4 @@
-from .db_work import Database
+from .db_work import Database, Database_Thread
 from .db_config import TOURNAMENT_TYPES
 
 
@@ -18,6 +18,10 @@ def get_prompt_view_games_id(tourn_type: str = None) -> str:
         return f"SELECT game_key FROM games WHERE game_status<>3;"
 
 
+def get_prompt_view_nicknames_by_tourn_type(tourn_type: str) -> str:
+    return f"SELECT nickname FROM participants WHERE tournament LIKE '%{tourn_type.capitalize()}%';"
+
+
 def get_prompt_delete_games(tourn_type: str) -> str:
     return f"DELETE FROM games WHERE tourn_type='{tourn_type}';"
 
@@ -30,16 +34,10 @@ def get_prompt_delete_rating(tourn_type: str) -> str:
     return f"DELETE FROM participants WHERE tournament LIKE '%{tourn_type.upper()}%';"
 
 
-# def get_prompt_delete_users_tournaments(tourn_type: str) -> str:
-#     return f"DELETE FROM users_tournaments WHERE tournament LIKE '%{tourn_type.upper()}%';"
-
-
 def get_prompt_view_rating(tourn_name: str) -> str:
     return f"SELECT nickname, scores FROM participants WHERE tournament='{tourn_name}' ORDER BY scores DESC;"
 
 
-# def get_prompt_view_chat_id_by_tourn(tourn_name: str) -> str:
-#     return f"SELECT chat_id FROM users_tournaments WHERE tournament='{tourn_name}';"
 def get_prompt_view_nicknames_by_tourn(tourn_name: str) -> str:
     return f"SELECT nickname FROM participants WHERE tournament='{tourn_name}';"
 
@@ -59,8 +57,8 @@ def get_prompt_register_participant(nickname: str,
 def get_prompt_add_scores(adding_scores: int,
                           nickname: str,
                           tournament: str) -> list[str]:
-    return [f"UPDATE participants SET scores=scores+{adding_scores} WHERE nickname={nickname} AND tournament='{tournament}';",
-           f"UPDATE users SET all_scores=all_scores+{adding_scores} WHERE nickname={nickname};"]
+    return [f"UPDATE participants SET scores=scores+{adding_scores} WHERE nickname='{nickname}' AND tournament='{tournament}';",
+           f"UPDATE users SET all_scores=all_scores+{adding_scores} WHERE nickname='{nickname}';"]
 
 
 def get_prompt_add_game(game_key: str,
@@ -115,6 +113,7 @@ def get_prompt_view_nick_by_id(chat_id: str) -> str:
 
 __all__ = [
     'Database',
+    'Database_Thread',
     'TOURNAMENT_TYPES',
     'PROMPT_VIEW_USERS',
     'PROMPT_VIEW_LAST_SCORES',
@@ -134,4 +133,5 @@ __all__ = [
     'get_prompt_view_game_coeffs',
     'get_prompt_delete_rating',
     'get_prompt_delete_answers',
+    'get_prompt_view_nicknames_by_tourn_type'
 ]

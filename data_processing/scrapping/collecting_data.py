@@ -1,5 +1,6 @@
 import time
 import json
+import logging
 
 import requests
 
@@ -65,7 +66,28 @@ class Collection(Parser):
                 self.password = ws_games.acell(self.PASSWORD_MONTH_CELL).value
 
 
-    def log_in(self) -> dict[str, str]:
+    def __create_post_request(self,
+                              url: str,
+                              headers: dict[str],
+                              params: dict[str, int],
+                              retry: int = 5) -> dict[str]:
+        try:
+            response = self.session.post(
+                url=url, headers=headers, data=params
+            )
+        except Exception as _ex:
+            if retry:
+                logging.info(f'retry={retry} => {url}')
+                retry -= 1
+                time.sleep(5)
+                return self.__create_post_request(url, headers, params)
+            else:
+                raise
+        else:
+            return response.json()
+        
+
+    def log_in(self) -> dict[str]:
         # Authorization in the flashscorekz.com, get id and hash
         headers = {
             'authority': 'lsid.eu',
@@ -80,11 +102,11 @@ class Collection(Parser):
             "namespace": "flashscore",
             "project": 46
         }
-
-        response = self.session.post(
+        # response = self.session.post(url='https://lsid.eu/v3/login', headers=headers, params=params)
+        data = self.__create_post_request(
             url='https://lsid.eu/v3/login', headers=headers, params=params
         )
-        data = response.json()
+        # data = response.json()
         del data['r']
 
         return data
@@ -101,11 +123,11 @@ class Collection(Parser):
             'user-agent': self.ua.random
         }
         params = '{"loggedIn":{"id":"%s","hash":"%s"},"project":46}' % (id, hash)
-
-        response = self.session.post(
-            url='https://lsid.eu/v3/getdata', headers=headers, data=params
+        
+        data = self.__create_post_request(
+            url='https://lsid.eu/v3/getdata', headers=headers, params=params
         )
-        data = response.json()
+
         keys = list(data['data']['mygames']['data'].keys())
 
         for key in keys:

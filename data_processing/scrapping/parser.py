@@ -36,7 +36,7 @@ class Parser(Connect):
                 time.sleep(5)
                 return self._create_game_request(url, retry)
             else:
-                raise     
+                raise  
         else:
             return response.text.split('¬')
 

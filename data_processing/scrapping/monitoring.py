@@ -59,7 +59,7 @@ class Monitoring(Parser):
                 get_prompt_view_games_id(type_)
             )
             if games:
-                
+                print(games)
                 games_id = [i[0] for i in games]      # get keys of games
                 for game in games_id:                                   # games iteration
 
@@ -107,7 +107,7 @@ class Monitoring(Parser):
                             # update scores
                             self.worksheet.batch_update(update_data)
                         db.action(
-                            get_prompt_update_status(game, status)
+                            get_prompt_update_status(game, status, type_)
                         )
 
             else:       # tournament is over

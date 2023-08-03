@@ -34,7 +34,7 @@ class Connect:
                 time.sleep(5)
                 self.__init__(spreadsheet_id, retry)
             else:
-                pass
+                raise
 
 
     def _get_json_path(self, type_: str) -> str:

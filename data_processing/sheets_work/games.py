@@ -152,6 +152,8 @@ class Games(Connect):
                 self.cells.index(self._get_column('teams')) + 1
             )
         )
+        if last_row < 2:
+            last_row = 2
         cells_range = f'{self._get_column("game_number")}2:' \
                         f'{self._get_column("url")}{last_row}'
         self.worksheet.batch_clear([cells_range])

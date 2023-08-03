@@ -67,10 +67,6 @@ def monitoring() -> None:
         
     if result:
 
-        send_msg(
-            msg_text=f'Турниры {" ".join(result)} завершены🔚🔚🔚',
-            chat_id=ADMIN, token=TOKEN
-        )
         for item in result:     # for every tournament type in completed types
 
             comparison = Comparison()
@@ -112,9 +108,14 @@ def monitoring() -> None:
 
             current_selected_types.remove(item)
 
+        send_msg(
+            msg_text=f'Турниры {" ".join(result)} завершены🔚🔚🔚\nРейтинги разосланы юзерам',
+            chat_id=ADMIN, token=TOKEN
+        )
+
 
 def run_monitoring() -> None:
-    schedule.every(15).minutes.do(monitoring)
+    schedule.every(5).minutes.do(monitoring)
     while thread_active:
         schedule.run_pending()
         

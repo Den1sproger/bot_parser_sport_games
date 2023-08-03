@@ -85,14 +85,15 @@ def get_prompt_add_game(game_key: str,
 
 
 def get_prompt_update_status(game_key: str,
-                             status: int) -> str:
-    return f"UPDATE games SET game_status={status} WHERE game_key='{game_key}';"
+                             status: int,
+                             tourn_type: str) -> str:
+    return f"UPDATE games SET game_status={status} WHERE game_key='{game_key}' AND tourn_type='{tourn_type}';"
 
 
 def get_prompt_view_users_by_answer(game_key: str,
                                     tournament: str) -> str:
     return f"SELECT chat_id, answer, tournament FROM answers WHERE game_key='{game_key}'" \
-           f" AND tournament LIKE '%{tournament.lower()}%';"
+           f" AND tournament LIKE '%{tournament.capitalize()}%';"
 
 
 def get_prompt_view_game_coeffs(game_key: str) -> str:

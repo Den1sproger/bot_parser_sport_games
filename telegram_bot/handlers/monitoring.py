@@ -5,8 +5,8 @@ import schedule
 from aiogram import types
 from aiogram.utils.exceptions import ChatNotFound, CantInitiateConversation
 from aiogram.dispatcher.filters import Command, Text
-from ..bot_config import dp, ADMIN, TOKEN, send_msg, users_bot
-from data_processing import Monitoring, Comparison
+from ..bot_config import dp, ADMIN, TOKEN, users_bot, USER_TOKEN
+from data_processing import Monitoring, Comparison, send_msg
 from ..keyboards import (get_select_tourn_type_ikb,
                          get_start_mail_ikb)
 from database import (Database,
@@ -41,7 +41,7 @@ async def send_start_notification(callback: types.CallbackQuery) -> None:
             )[0]['chat_id']
             chat_ids.append(chat_id)
 
-    msg_text='❗️❗️❗️Доступно голосование в некоторых турнирах'
+    msg_text='❗️Доступно участие в турнире\nВ разделе "Текущие турниры" выберите свой турнир'
     for chat_id in set(chat_ids):
         try:
             await users_bot.send_message(chat_id=chat_id, text=msg_text)
@@ -57,7 +57,7 @@ async def send_start_notification(callback: types.CallbackQuery) -> None:
 
 
 
-def monitoring() -> None:
+def monitoring():
     global current_selected_types
     result = None
     if current_selected_types:
@@ -104,7 +104,7 @@ def monitoring() -> None:
                         msg_text += f'\nВаша позиция в списке: {own_number} из {len(rating)}' \
                                     f'\n{own_number}. {nickname}: {own_score}'
                         
-                        send_msg(msg_text=msg_text, chat_id=user_chat_id)
+                        send_msg(msg_text=msg_text, chat_id=user_chat_id, token=USER_TOKEN)
 
             current_selected_types.remove(item)
 

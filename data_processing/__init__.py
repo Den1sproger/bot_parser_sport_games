@@ -3,7 +3,8 @@ from .scrapping.monitoring import Monitoring
 from .sheets_work.games import Games
 from .sheets_work.participants import Rating
 from .sheets_work.comparison import Comparison
-from .config import FILEPATH_JSON
+from .config import FILEPATH_JSON, send_msg
+
 
 
 __all__ = [
@@ -12,5 +13,6 @@ __all__ = [
     'Games',
     'Rating',
     'Comparison',
-    'FILEPATH_JSON'
+    'FILEPATH_JSON',
+    'send_msg'
 ]

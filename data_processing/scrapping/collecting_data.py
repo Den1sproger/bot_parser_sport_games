@@ -29,7 +29,7 @@ class Collection(Parser):
         'Футбол': True,
         'Теннис': False,
         'Баскетбол': False,
-        'Хоккей': True,
+        'Хоккей': False,
         'Гандбол': True,
         'Волейбол': False
     }

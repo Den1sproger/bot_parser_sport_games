@@ -34,8 +34,9 @@ def get_prompt_delete_rating(tourn_type: str) -> str:
     return f"DELETE FROM participants WHERE tournament LIKE '%{tourn_type.upper()}%';"
 
 
-def get_prompt_view_rating(tourn_name: str) -> str:
-    return f"SELECT nickname, scores FROM participants WHERE tournament='{tourn_name}' ORDER BY scores DESC;"
+def get_prompt_view_rating(tourn_name: str,
+                           nickname: str) -> str:
+    return f"SELECT scores FROM participants WHERE tournament='{tourn_name}' AND nickname='{nickname}';"
 
 
 def get_prompt_view_nicknames_by_tourn(tourn_name: str) -> str:

@@ -84,26 +84,12 @@ def monitoring():
                             get_prompt_view_chat_id_by_nick(nickname)
                         )[0]['chat_id']
 
-                        msg_text = f'🏆Таблица лидеров {tourn_name}:\n'
+                        scores = db.get_data_list(
+                            get_prompt_view_rating(tourn_name, nickname)
+                        )[0]['scores']
 
-                        rating = db.get_data_list(get_prompt_view_rating(tourn_name))
-                        own_number = 0
-                        own_score = 0
-                        count = 0
-                        for participant in rating:
+                        msg_text = f'🏁🏁Турнир {tourn_name} завершен\nВы набрали {scores} очков'
 
-                            count += 1
-                            if count <= 10:
-                                msg_text += f'{count}. {participant["nickname"]}: {participant["scores"]}\n'
-                            if participant["nickname"] == nickname:
-                                own_number = count
-                                own_score = participant["scores"]
-                                if count >= 10: break
-
-                        # user's position
-                        msg_text += f'\nВаша позиция в списке: {own_number} из {len(rating)}' \
-                                    f'\n{own_number}. {nickname}: {own_score}'
-                        
                         send_msg(msg_text=msg_text, chat_id=user_chat_id, token=USER_TOKEN)
 
             current_selected_types.remove(item)

@@ -4,6 +4,7 @@ from .db_config import TOURNAMENT_TYPES
 
 PROMPT_VIEW_USERS = "SELECT chat_id FROM users;"
 PROMPT_VIEW_LAST_SCORES = "SELECT nickname, all_scores FROM users;"
+PROMPT_RESET_OVERALL_RATING = "UPDATE users SET all_scores=0;"
 
 
 def get_prompt_view_games(tourn_type: str) -> str:
@@ -113,12 +114,14 @@ def get_prompt_view_nick_by_id(chat_id: str) -> str:
     return f"SELECT nickname FROM users WHERE chat_id='{chat_id}';"
 
 
+
 __all__ = [
     'Database',
     'Database_Thread',
     'TOURNAMENT_TYPES',
     'PROMPT_VIEW_USERS',
     'PROMPT_VIEW_LAST_SCORES',
+    'PROMPT_RESET_OVERALL_RATING',
     'get_prompt_view_nicknames_by_tourn',
     'get_prompt_view_rating',
     'get_prompt_delete_games',

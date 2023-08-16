@@ -27,6 +27,7 @@ async def set_default_commands(dp: Dispatcher) -> None:
             BotCommand('launch', 'Запустить мониторинг'),
             BotCommand('break', 'Остановить мониторинг'),
             BotCommand('finish', 'Закончить турнир'),
-            BotCommand('add_rating', 'Заполнить текущий рейтинг')
+            BotCommand('add_rating', 'Заполнить текущий рейтинг'),
+            BotCommand('reset_overall_rating', 'Обнулить общий рейтинг')
         ]
     )

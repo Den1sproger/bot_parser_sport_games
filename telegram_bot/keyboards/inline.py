@@ -25,41 +25,34 @@ def get_tourn_type_ikb(action: str) -> InlineKeyboardMarkup:
     return ikb
 
 
-def get_select_tourn_type_ikb(selected_types: list[str] = []) -> InlineKeyboardMarkup:
+def get_select_tourn_type_ikb(callback: str = '',
+                              selected_types: list[str] = []) -> InlineKeyboardMarkup:
     inline_keyboard = []
     for type_ in TOURNAMENT_TYPES:
         text: str
         callback_data: str
         if type_ in selected_types:
             text = f'➡️{type_}⬅️'
-            callback_data=f'unselect_type_{type_.lower()}'
+            callback_data=f'unselect_type_{callback}_{type_.lower()}'
         else:
             text = type_
-            callback_data=f'select_type_{type_.lower()}'
+            callback_data=f'select_type_{callback}_{type_.lower()}'
         inline_keyboard.append(
-                [InlineKeyboardButton(text=text, callback_data=callback_data)]
-            )
-        
+            [InlineKeyboardButton(text=text, callback_data=callback_data)]
+        )
+    
+    # start monitoring button with selected tournament types
     inline_keyboard.append(
-        [InlineKeyboardButton('Запомнить выбор и начать', callback_data='remember_choice')]
+        [
+            InlineKeyboardButton(
+                text='Запомнить выбор и начать',
+                callback_data=f'remember_choice_{callback}'
+            )
+        ]
     )
     ikb = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
     return ikb
 
-
-def get_start_mail_ikb(tourn_types: list[str]) -> InlineKeyboardMarkup:
-    for i in tourn_types:
-        assert i in TOURNAMENT_TYPES, 'Unknown tournament types'
-
-    ikb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(
-                'Отправить уведомление',
-                callback_data=f'send_start_notification_{"_".join(tourn_types)}'
-            )]
-        ]
-    )
-    return ikb
 
 
 confirm_finish_ikb = InlineKeyboardMarkup(

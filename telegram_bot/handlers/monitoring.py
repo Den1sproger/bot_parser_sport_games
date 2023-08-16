@@ -7,8 +7,7 @@ from aiogram.utils.exceptions import ChatNotFound, CantInitiateConversation
 from aiogram.dispatcher.filters import Command, Text
 from ..bot_config import dp, ADMIN, TOKEN, users_bot, USER_TOKEN
 from data_processing import Monitoring, Comparison, send_msg
-from ..keyboards import (get_select_tourn_type_ikb,
-                         get_start_mail_ikb)
+from ..keyboards import get_select_tourn_type_ikb
 from database import (Database,
                       get_prompt_view_username_by_id,
                       get_prompt_view_chat_id_by_nick,
@@ -20,40 +19,9 @@ from database import (Database,
 
 
 current_selected_types = []
+current_selt_send = []
 thread_monitoring: threading.Thread
 thread_active = False
-
-
-
-@dp.callback_query_handler(lambda callback: callback.data.startswith('send_start_notification_'))
-async def send_start_notification(callback: types.CallbackQuery) -> None:
-    tourn_types = callback.data.replace('send_start_notification_', '').split('_')
-
-    db = Database()
-    
-    chat_ids = []
-    for i in tourn_types:
-        users = db.get_data_list(get_prompt_view_nicknames_by_tourn_type(i))
-        nicknames = [i['nickname'] for i in users]
-        for nick in nicknames:
-            chat_id = db.get_data_list(
-                get_prompt_view_chat_id_by_nick(nick)
-            )[0]['chat_id']
-            chat_ids.append(chat_id)
-
-    msg_text='❗️Доступно участие в турнире\nВ разделе "Текущие турниры" выберите свой турнир'
-    for chat_id in set(chat_ids):
-        try:
-            await users_bot.send_message(chat_id=chat_id, text=msg_text)
-        except (ChatNotFound, CantInitiateConversation):
-            username = db.get_data_list(
-                get_prompt_view_username_by_id(str(chat_id))
-            )[0]['username']
-            await callback.message.answer(
-                f'@{username} не создал чат с ботом'
-            )
-
-    await callback.message.answer('✅Уведомления отправлены пользователям')
 
 
 
@@ -120,6 +88,7 @@ def run_monitoring() -> None:
         schedule.run_pending()
         
 
+# button/command in main menu
 @dp.message_handler(Text(equals='🚀🚀Запустить мониторинг'), user_id=ADMIN)
 @dp.message_handler(Command('launch'), user_id=ADMIN)
 async def launch_monitoring(message: types.Message) -> None:
@@ -171,6 +140,7 @@ async def unselect_type(callback: types.CallbackQuery) -> None:
     )
 
 
+# inline button starting monitoring with selected types
 @dp.callback_query_handler(lambda callback: callback.data == 'remember_choice')
 async def unselect_type(callback: types.CallbackQuery) -> None:
     global thread_monitoring, thread_active, current_selected_types
@@ -193,6 +163,67 @@ async def unselect_type(callback: types.CallbackQuery) -> None:
 
     await callback.message.answer(
         text="✅Мониторинг запущен",
-        reply_markup=get_start_mail_ikb(current_selected_types)
+        reply_markup=get_select_tourn_type_ikb(callback='send')
     )
     await callback.message.delete()
+
+
+
+@dp.callback_query_handler(lambda callback: callback.data.startswith('select_type_send_'))
+async def select_type(callback: types.CallbackQuery) -> None:
+    tourn_type = callback.data.replace('select_type_send_', '').upper()
+
+    global current_selt_send
+    current_selt_send.append(tourn_type)
+
+    await callback.message.edit_reply_markup(
+        reply_markup=get_select_tourn_type_ikb(current_selt_send)
+    )
+
+
+@dp.callback_query_handler(lambda callback: callback.data.startswith('unselect_type_send_'))
+async def unselect_type(callback: types.CallbackQuery) -> None:
+    tourn_type = callback.data.replace('unselect_type_send_', '').upper()
+
+    global current_selt_send
+    current_selt_send.remove(tourn_type)
+
+    await callback.message.edit_reply_markup(
+        reply_markup=get_select_tourn_type_ikb(current_selt_send)
+    )
+
+
+@dp.callback_query_handler(lambda callback: callback.data == 'remember_choice_send')
+async def unselect_type(callback: types.CallbackQuery) -> None:
+    global current_selt_send
+    if not current_selt_send:
+        await callback.answer('Вы не выбрали ни одного турнира')
+        return
+    
+    db = Database()
+
+    chat_ids = []
+    for i in current_selt_send:
+        users = db.get_data_list(get_prompt_view_nicknames_by_tourn_type(i))
+        nicknames = [i['nickname'] for i in users]
+        for nick in nicknames:
+            chat_id = db.get_data_list(
+                get_prompt_view_chat_id_by_nick(nick)
+            )[0]['chat_id']
+            chat_ids.append(chat_id)
+
+    msg_text='❗️Доступно участие в турнире\nВ разделе "Текущие турниры" выберите свой турнир'
+    for chat_id in set(chat_ids):
+        try:
+            await users_bot.send_message(chat_id=chat_id, text=msg_text)
+        except (ChatNotFound, CantInitiateConversation):
+            username = db.get_data_list(
+                get_prompt_view_username_by_id(str(chat_id))
+            )[0]['username']
+            await callback.message.answer(
+                f'@{username} не создал чат с ботом'
+            )
+
+    current_selt_send.clear()
+    await callback.message.answer('✅Уведомления отправлены пользователям')
+

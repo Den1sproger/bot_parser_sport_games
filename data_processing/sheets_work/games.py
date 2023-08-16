@@ -211,5 +211,20 @@ class Games(Connect):
             json.dump(games, file, indent=4, ensure_ascii=False)
             
                 
+    def color_cell(self, game_key: str, color: str, winner = None) -> None:
+        assert color not in ('green', 'red'), 'Unknown color'
 
+        game_url = f'https://www.flashscorekz.com/match/{game_key}/#/match-summary'
+        in_column = self.cells.index(self._get_column('url')) + 1
+        cell = self.worksheet.find(query=game_url, in_column=in_column)
+        
+        if color == 'green':
+            row = cell.row + winner - 1
+            ranges = f"{self._get_column('teams')}{row}:{self._get_column('coefficients')}{row}"
+        else:
+            ranges = f"{self._get_column('url')}{cell.row}"
 
+        self.worksheet.format(
+            ranges=ranges,
+            format={"backgroundColor": {color: 1.0}}
+        )

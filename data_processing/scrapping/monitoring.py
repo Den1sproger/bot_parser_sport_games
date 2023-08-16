@@ -1,4 +1,5 @@
 import string
+import logging
 
 from database import (Database_Thread,
                       TOURNAMENT_TYPES,
@@ -10,6 +11,7 @@ from database import (Database_Thread,
                       get_prompt_view_nick_by_id)
 from .parser import Parser
 from ..sheets_work.participants import Users
+from ..sheets_work.games import Games
 
 
 
@@ -59,7 +61,6 @@ class Monitoring(Parser):
                 get_prompt_view_games_id(type_)
             )
             if games:
-                print(games)
                 games_id = [i[0] for i in games]      # get keys of games
                 for game in games_id:                                   # games iteration
 
@@ -68,11 +69,19 @@ class Monitoring(Parser):
                         
                         if status == 3:                                 # if the game is over
                             
+                            result = self.get_winner(game)   # winner
+                            table_g = Games(tourn_type=type_)
+
+                            if not result:
+                                table_g.color_cell(game_key=game, color='red')
+                                continue
+                            
+                            table_g.color_cell(game_key=game, color='green', winner=result)
+                            
                             coeffs = db.get_data_list(
                                 get_prompt_view_game_coeffs(game)
                             )[0]
                             coeffs = list(coeffs)
-                            result = self.get_winner(game)   # winner
 
                             answers = db.get_data_list(
                                 get_prompt_view_users_by_answer(game, type_)
@@ -123,8 +132,9 @@ class Monitoring(Parser):
             return completed_types
 
 
-    def get_winner(self, game_id) -> int:
+    def get_winner(self, game_id, type_: str) -> int:
         # get the end scores of the teams
+        
         data = self._create_game_request(
             url=f'https://local-ruua.flashscore.ninja/46/x/feed/dc_1_{game_id}'
         )
@@ -134,8 +144,13 @@ class Monitoring(Parser):
             value = item.split('÷')[-1]
             string[key] = value
 
-        score_1 = string['DE']
-        score_2 = string['DF']
+        try:
+            score_1 = string['DE']
+            score_2 = string['DF']
+        except Exception as _ex:
+            logging.error(_ex)
+            return False
+        
         if score_1 > score_2:
             return 1        # the first team win
         elif score_1 < score_2:

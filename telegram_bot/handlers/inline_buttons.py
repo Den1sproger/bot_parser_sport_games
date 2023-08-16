@@ -1,11 +1,12 @@
 import logging
 
 from aiogram import types
-from data_processing import Rating, Games, Collection, Comparison
+from data_processing import Rating, Games, Collection, Comparison, Users
 from ..bot_config import dp
 from ..keyboards import get_tourn_type_ikb, get_ikb_gs_url
 from googlesheets import GAMES_SPREADSHEET_URL, RATING_SPREADSHEET_URL
 from database import (Database,
+                      PROMPT_RESET_OVERALL_RATING,
                       get_prompt_view_games_id,
                       get_prompt_delete_answers,
                       get_prompt_delete_rating,
@@ -165,3 +166,26 @@ async def add_rating(callback: types.CallbackQuery) -> None:
         await callback.message.answer(
             "Данные утверждены✅\nДля корректной работы ничего не меняйте в таблице"
         )
+
+
+
+@dp.callback_query_handler(lambda callback: callback.data == 'confirm_reset')
+async def confirm_reset(callback: types.CallbackQuery) -> None:
+    try:
+        db = Database()
+        db.action(PROMPT_RESET_OVERALL_RATING)
+        
+        users = Users()
+        users.update_scores()
+
+    except Exception as _ex:
+        logging.error(_ex)
+        await callback.message.answer("❌❌Ошибка❌❌")
+    else:
+        await callback.answer('Рейтинг обнулен✅')
+
+
+@dp.callback_query_handler(lambda callback: callback.data == 'not_confirm_reset')
+async def confirm_reset(callback: types.CallbackQuery) -> None:
+    await callback.message.delete()
+    

@@ -68,3 +68,11 @@ confirm_finish_ikb = InlineKeyboardMarkup(
         [InlineKeyboardButton('Не завершать', callback_data='not_confirm')]
     ]
 )
+
+
+confirm_reset_rating = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton('Подтвердить обнуление', callback_data='confirm_reset')],
+        [InlineKeyboardButton('Не обнулять', callback_data='not_confirm_reset')]
+    ]
+)

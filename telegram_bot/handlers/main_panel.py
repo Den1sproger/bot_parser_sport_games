@@ -1,7 +1,9 @@
 from aiogram import types
 from aiogram.dispatcher.filters import Command, Text
 from ..bot_config import dp, ADMIN
-from ..keyboards import get_tourn_type_ikb, confirm_finish_ikb
+from ..keyboards import (get_tourn_type_ikb,
+                         confirm_finish_ikb,
+                         confirm_reset_rating)
 
 
 
@@ -47,4 +49,12 @@ async def fill_rating(message: types.Message) -> None:
     await message.answer(
         text='Выберите тип турнира',
         reply_markup=get_tourn_type_ikb(action='add')
+    )
+
+
+@dp.message_handler(Command('reset_overall_rating'), user_id=ADMIN)
+async def reset_overall_rating(message: types.Message) -> None:
+    await message.answer(
+        text='⚠️⚠️⚠️Вы точно хотите обнулить рейтинг?\nОтменить это действие будет невозможно',
+        reply_markup=confirm_reset_rating
     )

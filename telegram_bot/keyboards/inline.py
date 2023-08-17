@@ -33,10 +33,10 @@ def get_select_tourn_type_ikb(callback: str = '',
         callback_data: str
         if type_ in selected_types:
             text = f'➡️{type_}⬅️'
-            callback_data=f'unselect_type_{callback}_{type_.lower()}'
+            callback_data=f'{callback}unselect_type_{type_.lower()}'
         else:
             text = type_
-            callback_data=f'select_type_{callback}_{type_.lower()}'
+            callback_data=f'{callback}select_type_{type_.lower()}'
         inline_keyboard.append(
             [InlineKeyboardButton(text=text, callback_data=callback_data)]
         )
@@ -46,7 +46,7 @@ def get_select_tourn_type_ikb(callback: str = '',
         [
             InlineKeyboardButton(
                 text='Запомнить выбор и начать',
-                callback_data=f'remember_choice_{callback}'
+                callback_data=f'{callback}remember_choice'
             )
         ]
     )

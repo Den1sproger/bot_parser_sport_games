@@ -102,84 +102,35 @@ async def break_monitoring(message: types.Message) -> None:
         await message.answer('✅Мониторинг остановлен')
 
 
-@dp.callback_query_handler(lambda callback: callback.data.startswith('select_type_'))
+@dp.callback_query_handler(lambda callback: callback.data.startswith('sendselect_type_'))
 async def select_type(callback: types.CallbackQuery) -> None:
-    tourn_type = callback.data.replace('select_type_', '').upper()
-
-    global current_selected_types
-    current_selected_types.append(tourn_type)
-
-    await callback.message.edit_reply_markup(
-        reply_markup=get_select_tourn_type_ikb(current_selected_types)
-    )
-
-
-@dp.callback_query_handler(lambda callback: callback.data.startswith('unselect_type_'))
-async def unselect_type(callback: types.CallbackQuery) -> None:
-    tourn_type = callback.data.replace('unselect_type_', '').upper()
-
-    global current_selected_types
-    current_selected_types.remove(tourn_type)
-
-    await callback.message.edit_reply_markup(
-        reply_markup=get_select_tourn_type_ikb(current_selected_types)
-    )
-
-
-# inline button starting monitoring with selected types
-@dp.callback_query_handler(lambda callback: callback.data == 'remember_choice')
-async def unselect_type(callback: types.CallbackQuery) -> None:
-    global thread_monitoring, thread_active, current_selected_types
-    if not current_selected_types:
-        await callback.answer('Вы не выбрали ни одного турнира')
-        return
-    
-    db = Database()
-
-    for type_ in current_selected_types:
-        games = db.get_data_list(get_prompt_view_games_id(type_))
-        if not games:
-            await callback.message.answer(f'❌❌У вас нет игр в базе данных {type_}')
-            return
-    
-    thread_monitoring = threading.Thread(target=run_monitoring,
-                                         daemon=True)
-    thread_active = True
-    thread_monitoring.start()
-
-    await callback.message.answer(
-        text="✅Мониторинг запущен",
-        reply_markup=get_select_tourn_type_ikb(callback='send')
-    )
-    await callback.message.delete()
-
-
-
-@dp.callback_query_handler(lambda callback: callback.data.startswith('select_type_send_'))
-async def select_type(callback: types.CallbackQuery) -> None:
-    tourn_type = callback.data.replace('select_type_send_', '').upper()
+    tourn_type = callback.data.replace('sendselect_type_', '').upper()
 
     global current_selt_send
     current_selt_send.append(tourn_type)
 
     await callback.message.edit_reply_markup(
-        reply_markup=get_select_tourn_type_ikb(current_selt_send)
+        reply_markup=get_select_tourn_type_ikb(
+            callback='send', selected_types=current_selt_send
+        )
     )
 
 
-@dp.callback_query_handler(lambda callback: callback.data.startswith('unselect_type_send_'))
+@dp.callback_query_handler(lambda callback: callback.data.startswith('sendunselect_type_'))
 async def unselect_type(callback: types.CallbackQuery) -> None:
-    tourn_type = callback.data.replace('unselect_type_send_', '').upper()
+    tourn_type = callback.data.replace('sendunselect_type_', '').upper()
 
     global current_selt_send
     current_selt_send.remove(tourn_type)
 
     await callback.message.edit_reply_markup(
-        reply_markup=get_select_tourn_type_ikb(current_selt_send)
+        reply_markup=get_select_tourn_type_ikb(
+            callback='send', selected_types=current_selt_send
+        )
     )
 
 
-@dp.callback_query_handler(lambda callback: callback.data == 'remember_choice_send')
+@dp.callback_query_handler(lambda callback: callback.data == 'sendremember_choice')
 async def unselect_type(callback: types.CallbackQuery) -> None:
     global current_selt_send
     if not current_selt_send:
@@ -212,4 +163,58 @@ async def unselect_type(callback: types.CallbackQuery) -> None:
 
     current_selt_send.clear()
     await callback.message.answer('✅Уведомления отправлены пользователям')
+    await callback.message.delete()
+
+
+
+@dp.callback_query_handler(lambda callback: callback.data.startswith('select_type_'))
+async def select_type(callback: types.CallbackQuery) -> None:
+    tourn_type = callback.data.replace('select_type_', '').upper()
+
+    global current_selected_types
+    current_selected_types.append(tourn_type)
+
+    await callback.message.edit_reply_markup(
+        reply_markup=get_select_tourn_type_ikb(selected_types=current_selected_types)
+    )
+
+
+@dp.callback_query_handler(lambda callback: callback.data.startswith('unselect_type_'))
+async def unselect_type(callback: types.CallbackQuery) -> None:
+    tourn_type = callback.data.replace('unselect_type_', '').upper()
+
+    global current_selected_types
+    current_selected_types.remove(tourn_type)
+
+    await callback.message.edit_reply_markup(
+        reply_markup=get_select_tourn_type_ikb(selected_types=current_selected_types)
+    )
+
+
+# inline button starting monitoring with selected types
+@dp.callback_query_handler(lambda callback: callback.data == 'remember_choice')
+async def unselect_type(callback: types.CallbackQuery) -> None:
+    global thread_monitoring, thread_active, current_selected_types
+    if not current_selected_types:
+        await callback.answer('Вы не выбрали ни одного турнира')
+        return
+    
+    db = Database()
+
+    for type_ in current_selected_types:
+        games = db.get_data_list(get_prompt_view_games_id(type_))
+        if not games:
+            await callback.message.answer(f'❌❌У вас нет игр в базе данных {type_}')
+            return
+    
+    thread_monitoring = threading.Thread(target=run_monitoring,
+                                         daemon=True)
+    thread_active = True
+    thread_monitoring.start()
+
+    await callback.message.answer(
+        text="✅Мониторинг запущен\nВы можете отправить уведомления юзерам",
+        reply_markup=get_select_tourn_type_ikb(callback='send')
+    )
+    await callback.message.delete()
 

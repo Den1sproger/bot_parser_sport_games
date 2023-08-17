@@ -22,7 +22,9 @@ UNIVERSE_DOMAIN = os.getenv('universe_domain')
 SPREADSHEET_ID = os.getenv('spreadsheet_id')
 COMPARISON_SPREADSHEET_ID = os.getenv('comparison_spreadsheet_id')
 # tables sheets urls
-GAMES_SPREADSHEET_URL = os.getenv('games_spreadsheet_url')
+GAMES_FAST_URL = os.getenv('games_fast_url')
+GAMES_STANDART_URL = os.getenv('games_standart_url')
+GAMES_SLOW_URL = os.getenv('games_slow_url')
 USERS_SPREADSHEET_URL = os.getenv('users_spreadsheet_url')
 RATING_SPREADSHEET_URL = os.getenv('rating_spreadsheet_url')
 

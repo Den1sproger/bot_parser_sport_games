@@ -1,10 +1,16 @@
 import logging
 
 from aiogram import types
-from data_processing import Rating, Games, Collection, Comparison, Users
+from data_processing import (Rating,
+                             FAST,
+                             STANDART,
+                             SLOW,
+                             Collection,
+                             Comparison,
+                             Users)
 from ..bot_config import dp
 from ..keyboards import get_tourn_type_ikb, get_ikb_gs_url
-from googlesheets import GAMES_SPREADSHEET_URL, RATING_SPREADSHEET_URL
+from googlesheets import RATING_SPREADSHEET_URL
 from database import (Database,
                       PROMPT_RESET_OVERALL_RATING,
                       get_prompt_view_games_id,
@@ -16,6 +22,16 @@ from database import (Database,
                       get_prompt_register_participant)
 
 
+
+def get_tourn_class(tourn_type: str,
+                    games_data: dict = None) -> FAST | STANDART | SLOW:
+    if tourn_type == 'FAST':
+        return FAST(games_data=games_data)
+    elif tourn_type == 'STANDART':
+        return STANDART(games_data=games_data)
+    else:
+        return SLOW(games_data=games_data)
+    
 
 @dp.callback_query_handler(lambda callback: callback.data == 'confirm_finish')
 async def confirm_finish(callback: types.CallbackQuery) -> None:
@@ -40,7 +56,7 @@ async def select_type_finish(callback: types.CallbackQuery) -> None:
             get_prompt_delete_answers(tourn_type),
             get_prompt_delete_games(tourn_type)
         )
-        gs = Games(tourn_type=tourn_type)
+        gs = get_tourn_class(tourn_type)
         gs.clear_table()
     except FileNotFoundError:
         pass
@@ -73,10 +89,10 @@ async def select_type_fill(callback: types.CallbackQuery) -> None:
         parser.session.close()
 
         # writing data to the googlesheet
-        gs = Games(games_data=parser.full_data, tourn_type=tourn_type)
+        gs = get_tourn_class(tourn_type, games_data=parser.full_data)
         gs.write_data()
     except Exception as _ex:
-        logging.info(_ex)
+        logging.error(_ex)
         await callback.message.answer("❌❌Ошибка❌❌")
         return
     
@@ -84,7 +100,7 @@ async def select_type_fill(callback: types.CallbackQuery) -> None:
         text="Таблица заполнена✅",
         reply_markup=get_ikb_gs_url(
             button_text=gs.SHEET_NAME,
-            url=GAMES_SPREADSHEET_URL
+            url=gs.URL
         )
     )
 
@@ -93,7 +109,7 @@ async def select_type_fill(callback: types.CallbackQuery) -> None:
 async def select_type_clear(callback: types.CallbackQuery) -> None:
     try:
         tourn_type = callback.data.replace('_type_clear', '').upper()
-        gs = Games(tourn_type=tourn_type)
+        gs = get_tourn_class(tourn_type)
         gs.clear_table()
         db = Database()
         db.action(get_prompt_delete_games(tourn_type))
@@ -105,10 +121,10 @@ async def select_type_clear(callback: types.CallbackQuery) -> None:
         return
     
     await callback.message.answer(
-        text="Таблица очищена✅",
+        text=f"Таблица {tourn_type} очищена✅",
         reply_markup=get_ikb_gs_url(
             button_text=gs.SHEET_NAME,
-            url=GAMES_SPREADSHEET_URL
+            url=gs.URL
         )
     )
 
@@ -135,7 +151,7 @@ async def add_rating(callback: types.CallbackQuery) -> None:
                     nickname=item[0],
                     tournament=item[-1]
                 )
-            ),
+            )
             
         db.action(*queries)
     except Exception as _ex:
@@ -143,7 +159,7 @@ async def add_rating(callback: types.CallbackQuery) -> None:
         await callback.message.answer("❌❌Ошибка❌❌")
     else:
         await callback.message.answer(
-            text='✅Текущий рейтинг создан',
+            text=f'✅Текущий рейтинг {tourn_type} создан',
             reply_markup=get_ikb_gs_url(
                 button_text=Rating.SHEET_NAME,
                 url=RATING_SPREADSHEET_URL
@@ -155,7 +171,7 @@ async def add_rating(callback: types.CallbackQuery) -> None:
 async def add_rating(callback: types.CallbackQuery) -> None:
     try:
         tourn_type = callback.data.replace('_type_approve', '').upper()
-        gs = Games(tourn_type)
+        gs = get_tourn_class(tourn_type)
         gs.approve_tournament_games()
         parser = Collection(tourn_type)
         parser.write_to_database()
@@ -164,9 +180,8 @@ async def add_rating(callback: types.CallbackQuery) -> None:
         await callback.message.answer("❌❌Ошибка❌❌")
     else:
         await callback.message.answer(
-            "Данные утверждены✅\nДля корректной работы ничего не меняйте в таблице"
+            f"Данные {tourn_type} утверждены✅\nДля корректной работы ничего не меняйте в таблице"
         )
-
 
 
 @dp.callback_query_handler(lambda callback: callback.data == 'confirm_reset')

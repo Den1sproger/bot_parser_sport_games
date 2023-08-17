@@ -5,7 +5,10 @@ import string
 
 from ..config import Connect
 from database import TOURNAMENT_TYPES
-from googlesheets import SPREADSHEET_ID
+from googlesheets import (SPREADSHEET_ID,
+                          GAMES_STANDART_URL,
+                          GAMES_FAST_URL,
+                          GAMES_SLOW_URL)
 
 
 
@@ -20,35 +23,23 @@ class Games(Connect):
         'coefficients': 'E',
         'url': 'F'
     }
-    LENGTH = len(CELLS_COLS)
-    BETWEEN = 2
-    OFFSET = LENGTH + BETWEEN
-    SHEET_NAME = "Матчи на турнир"
 
 
     def __init__(self,
+                 ws_name: str,
                  tourn_type: str,
-                 games_data: dict = None,
+                 full_data: dict = None,
                  *args, **kwargs) -> None:
-        super().__init__(SPREADSHEET_ID)
         assert tourn_type in TOURNAMENT_TYPES, 'Unknown tournament type'
-        
-        self.tournament_type = tourn_type
-        self.worksheet = self.spreadsheet.worksheet(self.SHEET_NAME)
-        self.games_data = games_data
+        super().__init__(SPREADSHEET_ID)
+
+        self.games_data = full_data
+        self.worksheet = self.spreadsheet.worksheet(ws_name)
         self.cells = string.ascii_uppercase
+        self.tournament_type = tourn_type
 
 
-    def _get_column(self, column: str) -> str:
-        if self.tournament_type == 'FAST':
-            return self.cells[self.cells.index(self.CELLS_COLS[column]) + self.OFFSET]
-        elif self.tournament_type == 'STANDART':
-            return self.CELLS_COLS[column]
-        else:
-            return self.cells[self.cells.index(self.CELLS_COLS[column]) + self.OFFSET * 2]
-
-
-    def __combining_cells_in_line(self, length: int, count_gs: int) -> None:
+    def _combining_cells_in_line(self, length: int, count_gs: int) -> None:
         # combining the required cells in one line
         if length in [2, 3]:
             offset = length - 1
@@ -57,10 +48,10 @@ class Games(Connect):
         
         # columns in which to merge rows
         columns = [
-            self._get_column('game_number'),
-            self._get_column('sport'),
-            self._get_column('begin_time'),
-            self._get_column('url')
+            self.CELLS_COLS['game_number'],
+            self.CELLS_COLS['sport'],
+            self.CELLS_COLS['begin_time'],
+            self.CELLS_COLS['url']
         ]
         for i in columns:
             self.worksheet.merge_cells(
@@ -78,11 +69,11 @@ class Games(Connect):
         for data in list(self.games_data.values()):
             length = len(data['coeffs'])
 
-            self.__combining_cells_in_line(length, count_gs)
+            self._combining_cells_in_line(length, count_gs)
             time.sleep(1)
 
             # writing the number of game in table
-            column = self._get_column("game_number")
+            column = self.CELLS_COLS["game_number"]
             full_data.append(
                 {
                     'range': f'{column}{count_gs}',
@@ -102,7 +93,7 @@ class Games(Connect):
 
             # writing the type of sport, the date and time and the link of the game
             for i in ['sport', 'begin_time', 'url']:
-                column = self._get_column(i)
+                column = self.CELLS_COLS[i]
                 full_data.append(
                     {
                         "range": f"{column}{count_gs}",
@@ -124,7 +115,7 @@ class Games(Connect):
             for team, coeff in data['coeffs'].items():
                 full_data.append(
                     {
-                        "range": f'{self._get_column("teams")}{count_gs + offset}',
+                        "range": f'{self.CELLS_COLS["teams"]}{count_gs + offset}',
                         "values": [[team, coeff]]
                     }
                 )
@@ -132,8 +123,8 @@ class Games(Connect):
 
             formats.append(
                 {
-                    "range": f'{self._get_column("teams")}{count_gs}:' \
-                             f'{self._get_column("coefficients")}{count_gs + offset}',
+                    "range": f'{self.CELLS_COLS["teams"]}{count_gs}:' \
+                             f'{self.CELLS_COLS["coefficients"]}{count_gs + offset}',
                     "format": {"horizontalAlignment": "LEFT"}
                 }
             )
@@ -146,16 +137,17 @@ class Games(Connect):
         
 
     def clear_table(self):
-        # Clear the table and unmerge the all cells        
+        # Clear the table and unmerge the all cells
+               
         last_row = len(
             self.worksheet.col_values(
-                self.cells.index(self._get_column('teams')) + 1
+                self.cells.index(self.CELLS_COLS['teams']) + 1
             )
         )
         if last_row < 2:
             last_row = 2
-        cells_range = f'{self._get_column("game_number")}2:' \
-                        f'{self._get_column("url")}{last_row}'
+        cells_range = f'{self.CELLS_COLS["game_number"]}2:' \
+                        f'{self.CELLS_COLS["url"]}{last_row}'
         self.worksheet.batch_clear([cells_range])
         self.worksheet.unmerge_cells(cells_range)
         
@@ -165,7 +157,6 @@ class Games(Connect):
 
     def approve_tournament_games(self):
         # approve the games to the tournament in table of the games 
-        # if the coefficients have been changed in the tables
         path = self._get_json_path(self.tournament_type)
 
         with open(path, 'r', encoding='utf-8') as file:
@@ -178,7 +169,7 @@ class Games(Connect):
         for game in games_data:
             length = len(game['coeffs'])
             getting_data.append(
-                f'{self._get_column("sport")}{count + 1}:{self._get_column("url")}{count + length}'
+                f'{self.CELLS_COLS["sport"]}{count + 1}:{self.CELLS_COLS["url"]}{count + length}'
             )
             count += length
         
@@ -215,16 +206,72 @@ class Games(Connect):
         assert color not in ('green', 'red'), 'Unknown color'
 
         game_url = f'https://www.flashscorekz.com/match/{game_key}/#/match-summary'
-        in_column = self.cells.index(self._get_column('url')) + 1
+        in_column = self.cells.index(self.CELLS_COLS['url']) + 1
         cell = self.worksheet.find(query=game_url, in_column=in_column)
         
         if color == 'green':
             row = cell.row + winner - 1
-            ranges = f"{self._get_column('teams')}{row}:{self._get_column('coefficients')}{row}"
+            ranges = f"{self.CELLS_COLS['teams']}{row}:{self.CELLS_COLS['coefficients']}{row}"
         else:
-            ranges = f"{self._get_column('url')}{cell.row}"
+            ranges = f"{self.CELLS_COLS['url']}{cell.row}"
 
         self.worksheet.format(
             ranges=ranges,
             format={"backgroundColor": {color: 1.0}}
+        )
+
+
+
+class FAST(Games):
+    """sheet games FAST"""
+
+    SHEET_NAME = "Матчи FAST"
+    TOURN_TYPE = 'FAST'
+    URL = GAMES_FAST_URL
+
+
+    def __init__(self,
+                 games_data: dict = None,
+                 *args, **kwargs) -> None:
+        super().__init__(
+            ws_name=self.SHEET_NAME,
+            tourn_type=self.TOURN_TYPE,
+            full_data=games_data, *args, **kwargs
+        )
+
+
+
+class STANDART(Games):
+    """sheet games STANDART"""
+
+    SHEET_NAME = "Матчи STANDART"
+    TOURN_TYPE = 'STANDART'
+    URL = GAMES_STANDART_URL
+
+
+    def __init__(self,
+                 games_data: dict = None,
+                 *args, **kwargs) -> None:
+        super().__init__(
+            ws_name=self.SHEET_NAME,
+            tourn_type=self.TOURN_TYPE,
+            full_data=games_data, *args, **kwargs
+        )
+
+
+
+class SLOW(Games):
+    """sheet games SLOW"""
+
+    SHEET_NAME = "Матчи SLOW"
+    TOURN_TYPE = 'SLOW'
+    URL = GAMES_SLOW_URL
+
+    def __init__(self,
+                 games_data: dict = None,
+                 *args, **kwargs) -> None:
+        super().__init__(
+            ws_name=self.SHEET_NAME,
+            tourn_type=self.TOURN_TYPE,
+            full_data=games_data, *args, **kwargs
         )

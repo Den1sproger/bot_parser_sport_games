@@ -5,6 +5,7 @@ import logging
 import requests
 
 from datetime import datetime, timedelta, timezone
+from ..sheets_work.games import FAST, STANDART, SLOW
 from database import (Database,
                       TOURNAMENT_TYPES,
                       get_prompt_add_game,
@@ -33,13 +34,8 @@ class Collection(Parser):
         'Гандбол': True,
         'Волейбол': False
     }
-    SHEET_NAME = "Матчи на турнир"
-    EMAIL_MONTH_CELL = 'X3'
-    PASSWORD_MONTH_CELL = 'X4'
-    EMAIL_WEEK_CELL = 'H3'
-    PASSWORD_WEEK_CELL = 'H4'
-    EMAIL_DAY_CELL = 'P3'
-    PASSWORD_DAY_CELL = 'P4'
+    EMAIL_CELL = 'H3'
+    PASSWORD_CELL = 'H4'
 
 
     def __init__(self,
@@ -52,18 +48,18 @@ class Collection(Parser):
         self.session = requests.Session()
         self.full_data = {}
         self.tournament_type = tourn_type
+
+        if self.tournament_type == 'FAST':
+            ws_games = self.spreadsheet.worksheet(FAST.SHEET_NAME)
+        elif self.tournament_type == 'STANDART':
+            ws_games = self.spreadsheet.worksheet(STANDART.SHEET_NAME)
+        else:
+            ws_games = self.spreadsheet.worksheet(SLOW.SHEET_NAME)
+
         # email and password to flashscorekz.com
-        ws_games = self.spreadsheet.worksheet(self.SHEET_NAME)
         if get_full_data:
-            if self.tournament_type == 'FAST':
-                self.email = ws_games.acell(self.EMAIL_DAY_CELL).value
-                self.password = ws_games.acell(self.PASSWORD_DAY_CELL).value
-            if self.tournament_type == 'STANDART':
-                self.email = ws_games.acell(self.EMAIL_WEEK_CELL).value
-                self.password = ws_games.acell(self.PASSWORD_WEEK_CELL).value
-            else:
-                self.email = ws_games.acell(self.EMAIL_MONTH_CELL).value
-                self.password = ws_games.acell(self.PASSWORD_MONTH_CELL).value
+            self.email = ws_games.acell(self.EMAIL_CELL).value
+            self.password = ws_games.acell(self.PASSWORD_CELL).value
 
 
     def __create_post_request(self,
@@ -102,11 +98,9 @@ class Collection(Parser):
             "namespace": "flashscore",
             "project": 46
         }
-        # response = self.session.post(url='https://lsid.eu/v3/login', headers=headers, params=params)
         data = self.__create_post_request(
             url='https://lsid.eu/v3/login', headers=headers, params=params
         )
-        # data = response.json()
         del data['r']
 
         return data

@@ -151,6 +151,13 @@ class Games(Connect):
         self.worksheet.batch_clear([cells_range])
         self.worksheet.unmerge_cells(cells_range)
         
+        self.worksheet.format(
+            ranges=f"{self.CELLS_COLS['teams']}2:{self.CELLS_COLS['url']}{last_row}",
+            format={
+                "backgroundColor": {"red": 1.0, "green": 1.0, 'blue': 1.0}
+            }
+        )
+
         path = self._get_json_path(self.tournament_type)
         os.remove(path)
 
@@ -203,7 +210,7 @@ class Games(Connect):
             
                 
     def color_cell(self, game_key: str, color: str, winner = None) -> None:
-        assert color not in ('green', 'red'), 'Unknown color'
+        assert color in ('green', 'red'), 'Unknown color'
 
         game_url = f'https://www.flashscorekz.com/match/{game_key}/#/match-summary'
         in_column = self.cells.index(self.CELLS_COLS['url']) + 1
@@ -220,7 +227,7 @@ class Games(Connect):
             format={"backgroundColor": {color: 1.0}}
         )
 
-
+        
 
 class FAST(Games):
     """sheet games FAST"""

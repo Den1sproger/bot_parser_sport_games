@@ -83,7 +83,7 @@ def monitoring():
 
 
 def run_monitoring() -> None:
-    schedule.every(5).minutes.do(monitoring)
+    schedule.every(10).seconds.do(monitoring)
     while thread_active:
         schedule.run_pending()
         

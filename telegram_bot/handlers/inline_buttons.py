@@ -56,15 +56,18 @@ async def select_type_finish(callback: types.CallbackQuery) -> None:
             get_prompt_delete_answers(tourn_type),
             get_prompt_delete_games(tourn_type)
         )
-        gs = get_tourn_class(tourn_type)
-        gs.clear_table()
+        games_gs = get_tourn_class(tourn_type)
+        games_gs.clear_table()
+        
     except FileNotFoundError:
         pass
     except Exception as _ex:
         logging.error(_ex)
         await callback.message.answer("❌❌Ошибка❌❌")
-    else:
-        await callback.message.answer(f'✅Турниры {tourn_type} завершены')
+        return
+    
+    await callback.message.answer(f'✅Турниры {tourn_type} завершены')
+    await callback.message.delete()
 
 
 @dp.callback_query_handler(lambda callback: callback.data.endswith('_type_fill'))
@@ -198,6 +201,7 @@ async def confirm_reset(callback: types.CallbackQuery) -> None:
         await callback.message.answer("❌❌Ошибка❌❌")
     else:
         await callback.answer('Рейтинг обнулен✅')
+        await callback.message.delete()
 
 
 @dp.callback_query_handler(lambda callback: callback.data == 'not_confirm_reset')

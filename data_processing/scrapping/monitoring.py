@@ -11,7 +11,7 @@ from database import (Database_Thread,
                       get_prompt_view_nick_by_id)
 from .parser import Parser
 from ..sheets_work.participants import Users
-from ..sheets_work.games import Games
+from ..sheets_work.games import FAST, STANDART, SLOW
 
 
 
@@ -48,6 +48,17 @@ class Monitoring(Parser):
             return self.cells[self.cells.index(self.CELLS_COLS[column]) + self.OFFSET * 2]
 
 
+    def _get_tourn_class(self,
+                         tourn_type: str,
+                         games_data: dict = None) -> FAST | STANDART | SLOW:
+        if tourn_type == 'FAST':
+            return FAST(games_data=games_data)
+        elif tourn_type == 'STANDART':
+            return STANDART(games_data=games_data)
+        else:
+            return SLOW(games_data=games_data)
+
+
     def check_status(self) -> None | list[str]:
         # main function
         # checking the status of the games and update data in database
@@ -66,11 +77,13 @@ class Monitoring(Parser):
 
                     status = self._get_data_time(game, data_key='DA')
                     if status in [2, 3]:                                # if the game time status is not 1
-                        
+                        db.action(
+                            get_prompt_update_status(game, status, type_)
+                        )
                         if status == 3:                                 # if the game is over
                             
                             result = self.get_winner(game)   # winner
-                            table_g = Games(tourn_type=type_)
+                            table_g = self._get_tourn_class(tourn_type=type_)
 
                             if not result:
                                 table_g.color_cell(game_key=game, color='red')
@@ -115,9 +128,6 @@ class Monitoring(Parser):
                                     db.action(*prompts)
                             # update scores
                             self.worksheet.batch_update(update_data)
-                        db.action(
-                            get_prompt_update_status(game, status, type_)
-                        )
 
             else:       # tournament is over
                 completed_types.append(type_)
@@ -132,7 +142,7 @@ class Monitoring(Parser):
             return completed_types
 
 
-    def get_winner(self, game_id, type_: str) -> int:
+    def get_winner(self, game_id: str) -> int | bool:
         # get the end scores of the teams
         
         data = self._create_game_request(

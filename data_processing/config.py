@@ -6,6 +6,8 @@ import urllib3
 import requests
 import gspread
 
+from gspread.spreadsheet import Spreadsheet
+from gspread.exceptions import APIError
 from googlesheets import CREDENTIALS
 
 
@@ -50,21 +52,26 @@ class Connect:
     
     def __init__(self,
                  spreadsheet_id: str,
-                 retry: int = 5,
                  *args, **kwargs) -> None:
+        self.spreadsheet = Connect.connect_to_gs(spreadsheet_id=spreadsheet_id)
+
+    
+    @staticmethod
+    def connect_to_gs(spreadsheet_id: str, retry: int = 5) -> Spreadsheet:
         # connectig to googlesheets
         try:
-            self.gc = gspread.service_account_from_dict(CREDENTIALS,
-                                                        client_factory=gspread.BackoffClient)
-            self.spreadsheet = self.gc.open_by_key(spreadsheet_id)
-        except Exception as _ex:
+            gc = gspread.service_account_from_dict(CREDENTIALS,
+                                                   client_factory=gspread.BackoffClient)
+            spreadsheet = gc.open_by_key(spreadsheet_id)
+        except (APIError, Exception) as _ex:
             if retry:
                 logging.info(f'retry={retry} => spreadsheet {_ex}')
                 retry -= 1
                 time.sleep(5)
-                self.__init__(spreadsheet_id, retry)
+                return Connect.connect_to_gs(spreadsheet_id, retry)
             else:
                 raise
+        return spreadsheet
 
 
     def _get_json_path(self, type_: str) -> str:

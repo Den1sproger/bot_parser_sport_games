@@ -76,8 +76,9 @@ class Monitoring(Parser):
                 for game in games_id:                                   # games iteration
 
                     status = self._get_data_time(game, data_key='DA')
-                    if status in [2, 3]:                                # if the game time status is not 1
-                        db.action(
+                    if status in (2, 3,):                                # if the game time status is not 1
+
+                        db.action(                                      # update game status on 2 or 3
                             get_prompt_update_status(game, status, type_)
                         )
                         if status == 3:                                 # if the game is over

@@ -76,14 +76,14 @@ def get_prompt_add_game(game_key: str,
     
     try: draw_coeff = coeffs['Ничья']
     except KeyError:
-        return f"INSERT INTO games (game_key, sport, begin_time, first_team, first_coeff, second_team, second_coeff," \
-            f" url, game_status, tourn_type) VALUES ('{game_key}', '{sport}', '{begin_time}'," \
-            f" '{team_1}', '{coeff_1}', '{team_2}', '{coeff_2}', '{url}', 1, '{tourn_type}');"
-    else:
-        return f"INSERT INTO games (game_key, sport, begin_time, first_team, first_coeff, second_team, second_coeff," \
-            f" draw_coeff, url, game_status, tourn_type) VALUES ('{game_key}', '{sport}', '{begin_time}'," \
-            f" '{team_1}', '{coeff_1}', '{team_2}', '{coeff_2}', '{draw_coeff}', '{url}', 1, '{tourn_type}');"
-
+        return f'INSERT INTO games (game_key, sport, begin_time, first_team, first_coeff, second_team, second_coeff,' \
+            f' url, game_status, tourn_type) VALUES ("{game_key}", "{sport}", "{begin_time}",' \
+            f' "{team_1}", "{coeff_1}", "{team_2}", "{coeff_2}", "{url}", 1, "{tourn_type}");'
+    
+    return f'INSERT INTO games (game_key, sport, begin_time, first_team, first_coeff, second_team, second_coeff,' \
+            f' draw_coeff, url, game_status, tourn_type) VALUES ("{game_key}", "{sport}", "{begin_time}",' \
+            f' "{team_1}", "{coeff_1}", "{team_2}", "{coeff_2}", "{draw_coeff}", "{url}", 1, "{tourn_type}");'
+    
 
 def get_prompt_update_status(game_key: str,
                              status: int,

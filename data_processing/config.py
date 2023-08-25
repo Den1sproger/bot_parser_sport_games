@@ -10,8 +10,9 @@ from gspread.spreadsheet import Spreadsheet
 from gspread.exceptions import APIError
 from googlesheets import CREDENTIALS
 
+# /home/tournament_management/
 
-FILEPATH_JSON = "/home/tournament_management/data_processing/scrapping/"
+FILEPATH_JSON = "data_processing/scrapping/"
 
 
 

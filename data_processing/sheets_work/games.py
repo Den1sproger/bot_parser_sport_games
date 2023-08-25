@@ -2,7 +2,10 @@ import time
 import json
 import os
 import string
+import logging
 
+from gspread.exceptions import APIError
+from gspread.worksheet import Worksheet
 from ..config import Connect
 from database import TOURNAMENT_TYPES
 from googlesheets import (SPREADSHEET_ID,
@@ -208,13 +211,54 @@ class Games(Connect):
         with open(path, 'w', encoding='utf-8') as file:
             json.dump(games, file, indent=4, ensure_ascii=False)
             
-                
+
+    @staticmethod
+    def find_cell(worksheet: Worksheet,
+                  query: str,
+                  in_column: int,
+                  retry: int = 5):
+        try:
+            cell = worksheet.find(query=query, in_column=in_column)
+        except (APIError, Exception) as _ex:
+            if retry:
+                logging.info(f'retry={retry} => find cell {_ex}')
+                retry -= 1
+                time.sleep(5)
+                return Games.find_cell(
+                    worksheet=worksheet, query=query, in_column=in_column, retry=retry
+                )
+            else:
+                raise
+        return cell
+    
+
+    @staticmethod
+    def format_table(worksheet: Worksheet,
+                     cells_range: str,
+                     format: dict,
+                     retry: int = 5) -> None:
+        try:
+            worksheet.format(ranges=cells_range, format=format)
+        except (APIError, Exception) as _ex:
+            if retry:
+                logging.info(f'retry={retry} => format table {_ex}')
+                retry -= 1
+                time.sleep(5)
+                Games.format_table(
+                    worksheet=worksheet, cells_range=cells_range, format=format, retry=retry
+                )
+            else:
+                raise
+
+
     def color_cell(self, game_key: str, color: str, winner = None) -> None:
         assert color in ('green', 'red'), 'Unknown color'
 
         game_url = f'https://www.flashscorekz.com/match/{game_key}/#/match-summary'
         in_column = self.cells.index(self.CELLS_COLS['url']) + 1
-        cell = self.worksheet.find(query=game_url, in_column=in_column)
+        cell = Games.find_cell(
+            worksheet=self.worksheet, query=game_url, in_column=in_column
+        )
         
         if color == 'green':
             row = cell.row + winner - 1
@@ -222,8 +266,8 @@ class Games(Connect):
         else:
             ranges = f"{self.CELLS_COLS['url']}{cell.row}"
 
-        self.worksheet.format(
-            ranges=ranges,
+        Games.format_table(
+            worksheet=self.worksheet, cells_range=ranges,
             format={"backgroundColor": {color: 1.0}}
         )
 

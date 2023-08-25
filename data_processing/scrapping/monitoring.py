@@ -1,6 +1,10 @@
 import string
 import logging
+import time
 
+from gspread.exceptions import APIError
+from gspread.worksheet import Worksheet
+from gspread.spreadsheet import Spreadsheet
 from database import (Database_Thread,
                       TOURNAMENT_TYPES,
                       get_prompt_view_games_id,
@@ -35,9 +39,99 @@ class Monitoring(Parser):
         self.tournament_types = tourn_types
 
         super().__init__()
-        self.worksheet = self.spreadsheet.worksheet(self.SHEET_NAME)
+        self.worksheet = Monitoring.get_ws(self.spreadsheet)
         self.cells = string.ascii_uppercase
         
+
+    @staticmethod
+    def get_ws(spreadsheet: Spreadsheet, retry: int = 5) -> Worksheet:
+        try:
+            ws = spreadsheet.worksheet(Monitoring.SHEET_NAME)
+        except (APIError, Exception) as _ex:
+            if retry:
+                logging.info(f'retry={retry} => worksheet {_ex}')
+                retry -= 1
+                time.sleep(5)
+                return Monitoring.get_ws(spreadsheet=spreadsheet, retry=retry)
+            else:
+                raise
+        return ws
+    
+
+    @staticmethod
+    def update_scores(worksheet: Worksheet,
+                      update_data: list[dict[str]],
+                      retry: int = 5) -> None:
+        try:
+            worksheet.batch_update(update_data)
+        except (APIError, Exception) as _ex:
+            if retry:
+                logging.info(f'retry={retry} => update_scores {_ex}')
+                retry -= 1
+                time.sleep(5)
+                Monitoring.update_scores(
+                    worksheet=worksheet, update_data=update_data, retry=retry
+                )
+            else:
+                raise
+
+
+    @staticmethod
+    def get_col_values(worksheet: Worksheet,
+                       col_number: int,
+                       retry: int = 5) -> list[str]:
+        try:
+            col_values = worksheet.col_values(col_number)
+        except (APIError, Exception) as _ex:
+            if retry:
+                logging.info(f'retry={retry} => col_values {_ex}')
+                retry -= 1
+                time.sleep(5)
+                return Monitoring.get_col_values(
+                    worksheet=worksheet, col_number=col_number, retry=retry
+                )
+            else:
+                raise
+        return col_values
+    
+
+    @staticmethod
+    def get_cells_data(worksheet: Worksheet,
+                       cells_range: str,
+                       retry: int = 5) -> list:
+        try:
+            col_values = worksheet.get(cells_range)
+        except (APIError, Exception) as _ex:
+            if retry:
+                logging.info(f'retry={retry} => get cells data {_ex}')
+                retry -= 1
+                time.sleep(5)
+                return Monitoring.get_cells_data(
+                    worksheet=worksheet, cells_range=cells_range, retry=retry
+                )
+            else:
+                raise
+        return col_values
+        
+
+    @staticmethod
+    def sort_rating(*specs,
+                    worksheet: Worksheet,
+                    cells_range: str,
+                    retry: int = 5) -> None:
+        try:
+            worksheet.sort(*specs, range=cells_range)
+        except (APIError, Exception) as _ex:
+            if retry:
+                logging.info(f'retry={retry} => sort rating {_ex}')
+                retry -= 1
+                time.sleep(5)
+                Monitoring.sort_rating(
+                    *specs, worksheet=worksheet, cells_range=cells_range, retry=retry
+                )
+            else:
+                raise
+
 
     def _get_column(self, column: str, tourn_type: str) -> str:
         if tourn_type == 'FAST':
@@ -57,7 +151,7 @@ class Monitoring(Parser):
             return STANDART(games_data=games_data)
         else:
             return SLOW(games_data=games_data)
-
+        
 
     def check_status(self) -> None | list[str]:
         # main function
@@ -86,17 +180,19 @@ class Monitoring(Parser):
                             result = self.get_winner(game)   # winner
                             table_g = self._get_tourn_class(tourn_type=type_)
 
+                            # color cell
                             if not result:
                                 table_g.color_cell(game_key=game, color='red')
                                 continue
-                            
                             table_g.color_cell(game_key=game, color='green', winner=result)
                             
+                            # get coefficients
                             coeffs = db.get_data_list(
                                 get_prompt_view_game_coeffs(game)
                             )[0]
                             coeffs = list(coeffs)
 
+                            # get answers
                             answers = db.get_data_list(
                                 get_prompt_view_users_by_answer(game, type_)
                             )
@@ -128,7 +224,7 @@ class Monitoring(Parser):
                                     )
                                     db.action(*prompts)
                             # update scores
-                            self.worksheet.batch_update(update_data)
+                            Monitoring.update_scores(self.worksheet, update_data)
 
             else:       # tournament is over
                 completed_types.append(type_)
@@ -195,13 +291,14 @@ class Monitoring(Parser):
                   tourn_type: str,
                   tournament: str) -> str and int:
         # get the cell for the update score of the participant in the table
-        participants = self.worksheet.col_values(
-            self.cells.index(self._get_column("nickname", tourn_type)) + 1
+        participants = Monitoring.get_col_values(
+            worksheet=self.worksheet,
+            col_number=self.cells.index(self._get_column("nickname", tourn_type)) + 1
         )
         last_row = len(participants)
         cells_range = f"{self._get_column('nickname', tourn_type)}3:" \
                       f"{self._get_column('tourn_type', tourn_type)}{last_row}"
-        data = self.worksheet.get(cells_range)
+        data = Monitoring.get_cells_data(self.worksheet, cells_range)
 
         for item in data:
             if item[0] == nickname and item[-1] == tournament:
@@ -212,19 +309,23 @@ class Monitoring(Parser):
 
     def update_rating(self):
         # update the sheet with the raiting of the participants'
-        cells = string.ascii_uppercase
 
         for type_ in self.tournament_types:
             first_column = self._get_column("nickname", type_)
-            last_row = len(self.worksheet.col_values(self.cells.index(first_column) + 1))
+            last_row = len(
+                Monitoring.get_col_values(
+                    worksheet=self.worksheet,
+                    col_number=self.cells.index(first_column) + 1
+                )
+            )
             cells_range = f'{first_column}3:' \
                           f'{self._get_column("tourn_type", type_)}{last_row}'
             
-            self.worksheet.sort(
-                (cells.index(self._get_column("tourn_type", type_)) + 1, 'des'),
-                (cells.index(self._get_column("score", type_)) + 1, 'des'),
-                range=cells_range
+            Monitoring.sort_rating(
+                (self.cells.index(self._get_column("tourn_type", type_)) + 1, 'des'),
+                (self.cells.index(self._get_column("score", type_)) + 1, 'des'),
+                worksheet=self.worksheet,
+                cells_range=cells_range
             )
-
 
         

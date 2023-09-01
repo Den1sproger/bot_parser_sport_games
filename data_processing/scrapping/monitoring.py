@@ -268,21 +268,31 @@ class Monitoring(Parser):
 
     def get_scores_by_coeff(self, coeff: str) -> int:
         # get the quantity of scores by coefficient
+        if not coeff:
+            return 0
         coefficient = float(coeff.replace(',', '.'))
         if coefficient < 1.26:
-            return 2
+            return 3
         
-        translate = []
         count = 126
-        for score in range(3, 20):
+        switch = 2
+        score = 5
+
+        while score < 30:
             interval = [i / 100 for i in range(count, count + 50)]
             if coefficient in interval:
                 return score
-            translate.append(interval)
             count += 50
+
+            if switch == 1:
+                score += 2
+                switch = 2
+            else:
+                score += 1
+                switch = 1
         else:
             if coefficient >= 9.76:
-                return 20
+                return 30
             
 
     def get_cell_add_score(self,

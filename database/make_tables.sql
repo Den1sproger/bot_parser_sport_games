@@ -46,3 +46,8 @@ CREATE TABLE current_questions
     current_index int NOT NULL,
     current_tournament varchar(255) NOT NULL
 );
+
+CREATE TABLE admin_nicknames
+(
+	nickname varchar(255) PRIMARY KEY
+);

@@ -28,11 +28,11 @@ def get_prompt_delete_games(tourn_type: str) -> str:
 
 
 def get_prompt_delete_answers(tourn_type: str) -> str:
-    return f"DELETE FROM answers WHERE tournament LIKE '%{tourn_type.upper()}%';"
+    return f"DELETE FROM answers WHERE tournament LIKE '%{tourn_type.capitalize()}%';"
 
 
 def get_prompt_delete_rating(tourn_type: str) -> str:
-    return f"DELETE FROM participants WHERE tournament LIKE '%{tourn_type.upper()}%';"
+    return f"DELETE FROM participants WHERE tournament LIKE '%{tourn_type.capitalize()}%';"
 
 
 def get_prompt_view_rating(tourn_name: str) -> str:

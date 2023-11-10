@@ -2,3 +2,4 @@ __pycache__/
 .env
 py_log.log
 test.py
+venv/

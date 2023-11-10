@@ -207,11 +207,16 @@ class Monitoring(Parser):
                                     scores = self.get_scores_by_coeff(coeffs[result - 1])
                                     
                                     # update the user's scoes in the current table in the googlesheets
-                                    cell, adding_scores = self.get_cell_add_score(
-                                        score=scores, nickname=nickname,
-                                        tourn_type=type_,
-                                        tournament=answer[-1]
-                                    )
+                                    try:
+                                        cell, adding_scores = self.get_cell_add_score(
+                                            score=scores, nickname=nickname,
+                                            tourn_type=type_,
+                                            tournament=answer[-1]
+                                        )
+                                    except TypeError as _ex:
+                                        logging.error(f'scores={scores}\nnickname={nickname}\ntype_={type_}\ntournament={answer[-1]} ', _ex)
+                                        continue
+                                    
                                     update_data.append({
                                         'range': cell, 'values': [[adding_scores]]
                                     })
@@ -296,10 +301,10 @@ class Monitoring(Parser):
             
 
     def get_cell_add_score(self,
-                  nickname: str,
-                  score: int,
-                  tourn_type: str,
-                  tournament: str) -> str and int:
+                           nickname: str,
+                           score: int,
+                           tourn_type: str,
+                           tournament: str) -> str and int:
         # get the cell for the update score of the participant in the table
         participants = Monitoring.get_col_values(
             worksheet=self.worksheet,
